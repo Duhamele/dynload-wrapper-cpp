@@ -213,6 +213,25 @@ def write_header(filename, sysincludes, initname, functions, sym_definitions):
         file.write("#endif\n")
         file.write("#endif\n")
 
+
+def write_header_cpp(filename, sysincludes, functions, sym_definitions,namespace,nameclass):
+    with open(filename, 'w') as file:
+        file.write(f"#ifndef DYLIBLOAD_WRAPPER_{initname.upper()}\n")
+        file.write(f"#define DYLIBLOAD_WRAPPER_{initname.upper()}\n")
+        file.write(write_star_namespace(namespace))
+
+        file.write(write_end_namespace(namespace))
+        file.write("#endif\n")
+
+def write_star_namespace(namespace):
+    if namespace== "":
+        return ""
+    return f"namespace {namespace} { '{' } \n"
+def write_end_namespace(namespace):
+    if namespace == "":
+        return ""
+    return "}\n"
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description = "A tool to generate wrappers for run-time dlopen()ing of libraries.",
