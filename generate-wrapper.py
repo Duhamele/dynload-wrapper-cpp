@@ -26,6 +26,7 @@ import os
 import sys
 import argparse
 import textwrap
+from enum import Enum
 from datetime import datetime
 
 try:
@@ -214,7 +215,7 @@ def write_header(filename, sysincludes, initname, functions, sym_definitions):
         file.write("#endif\n")
 
 
-def write_header_cpp(filename, sysincludes, functions, sym_definitions,namespace,nameclass):
+def write_header_cpp(filename, sysincludes,initname, functions, sym_definitions,namespace,nameclass):
     with open(filename, 'w') as file:
         file.write(f"#ifndef DYLIBLOAD_WRAPPER_{initname.upper()}\n")
         file.write(f"#define DYLIBLOAD_WRAPPER_{initname.upper()}\n")
@@ -224,13 +225,67 @@ def write_header_cpp(filename, sysincludes, functions, sym_definitions,namespace
         file.write("#endif\n")
 
 def write_star_namespace(namespace):
-    if namespace== "":
+    if namespace is None or namespace== ""  :
         return ""
     return f"namespace {namespace} { '{' } \n"
 def write_end_namespace(namespace):
-    if namespace == "":
+    if namespace is None or namespace== ""  :
         return ""
     return "}\n"
+def write_start_class(nameclass):
+    return f"class {nameclass}{'{'}\n"
+def write_end_class(nameclass):
+    return "};\n"
+
+class DeclarationFunctionC:
+    class Language(Enum):
+        C='c'
+        CPP='cpp'
+    """
+    @param language: language of declaration of function
+    @param name: name of function
+    
+    
+    """
+    def __int__(self, name, language=Language.C, namespace=None, params=None, type_return=None):
+        if language is None:
+            self.language=Language.C
+        else:
+            self.language=language
+        self.name=name
+        if namespace is not None:
+            if self.language is self.Language.C:
+                raise Exception(f"Cannot use namespace with the language {self.language}")
+            self.namespace=namespace
+        if params is not None:
+            self.params=params
+        if type_return is not None:
+            self.type_return=type_return
+
+        return self
+
+    def getName(self):
+        return self.name
+    def getSymbol(self):
+        match self.language:
+            case self.Language.CPP:
+                return ""#TODO
+            case self.Language.C:
+                return self.name
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -255,7 +310,9 @@ if __name__ == "__main__":
     parser.add_argument('--omit-prefix', action='append', help='Omit functions that start with this prefix (eg _pa_) (may appear more than once)', required=False)
     parser.add_argument('--ignore-headers', action='append', help='Ignore the named headers, no function defintions from these headers will be included in the wrapper', required=False)
     parser.add_argument('--ignore-other', action=argparse.BooleanOptionalAction, help='Ignore all header files not explicitly mentioned', required=False)
-    
+    parser.add_argument('--output-language',help='Output the language code of the wrapper by defaut is c (values possible c c++ cpp', required=False, default='c', choices=['c', 'c++', 'cpp'], action='store')
+    parser.add_argument('--out-namespace',help='Output the namespace of the wrapper (eg lib::load)', required=False, action='store',default=None)
+
     args = parser.parse_args()
     FLAGS = PROGNAME + " " +  " ".join(sys.argv[1:])
 
@@ -271,6 +328,11 @@ if __name__ == "__main__":
         for item in s: 
             if item not in sym_definitions:
                 sym_definitions.append(item)
+    match args.output_language:
+        case 'c':
+            write_implementation(args.output_implementation, args.soname, args.sys_include, args.init_name, functions, sym_definitions, args.implementation_header)
+            write_header(args.output_header, args.sys_include, args.init_name, functions, sym_definitions)
+        case 'c++'|'cpp':
+            write_header_cpp(args.output_header, args.sys_include, args.init_name, functions, sym_definitions,args.out_namespace)
 
-    write_implementation(args.output_implementation, args.soname, args.sys_include, args.init_name, functions, sym_definitions, args.implementation_header)
-    write_header(args.output_header, args.sys_include, args.init_name, functions, sym_definitions)
+
