@@ -83,8 +83,14 @@ def parse_header(filename, omit_prefix, initname, ignore_headers = [], ignore_al
         if isinstance(ext, Decl):
             if not isinstance(ext.type, FuncDecl):
                 continue
-
+            generator= c_generator.CGenerator()
+            print( generator.visit(ext))
+            print(generator.visit(ext.type.args))
+            print(generator.visit(ext.type.type))
+            func = DeclarationFunctionC(ext.name, params=ext.type.args, type_return=ext.type)
             skip = False
+            ext.show()
+            print(stringify_declaration(ext))
             if omit_prefix:
                 for o in omit_prefix:
                     if ext.name.startswith(o):
@@ -108,8 +114,9 @@ def parse_header(filename, omit_prefix, initname, ignore_headers = [], ignore_al
                 continue
 
             functions.append(ext.name)
-
+            print(ext,end='\n')
             for param in ext.type.args:
+                print(param,end='\n')
                 # Parameter anonymization.
                 replace_name(param, get_name(param), "")
 
@@ -247,7 +254,7 @@ class DeclarationFunctionC:
     
     
     """
-    def __int__(self, name, language=Language.C, namespace=None, params=None, type_return=None):
+    def __init__(self, name, language=Language.C, namespace=None, params:None|list[TypeC]=None, type_return:None|TypeC=None):
         if language is None:
             self.language=Language.C
         else:
@@ -259,10 +266,11 @@ class DeclarationFunctionC:
             self.namespace=namespace
         if params is not None:
             self.params=params
+        else:
+            self.params=[]
         if type_return is not None:
             self.type_return=type_return
 
-        return self
 
     def getName(self):
         return self.name
@@ -271,6 +279,25 @@ class DeclarationFunctionC:
             case self.Language.CPP:
                 return ""#TODO
             case self.Language.C:
+                return self.name
+    def getTypeString(self, name_type:str):
+        if name_type.find(" "):
+            raise Exception(f"g")
+        match self.language:
+            case self.Language.CPP | self.Language.C:
+                parms=','.join(str(element) for element in self.params)
+                return f"{self.type_return}(*{name_type})({parms})"
+            case _:
+                raise Exception(f"Unknown language {self.language}")
+class TypeC:
+    def __init__(self,name:str|None=None):
+        if name is not None:
+            self.name=name
+    def __str__(self) -> str:
+        match self.name:
+            case None :
+                return "Not Implemented"
+            case _:
                 return self.name
 
 
