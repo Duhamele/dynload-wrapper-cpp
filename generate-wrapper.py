@@ -21,13 +21,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import dataclasses
 import os
 import sys
 import argparse
 import textwrap
 from enum import Enum
 from datetime import datetime
+from dataclasses import dataclass, field
 
 try:
     from pycparser import c_parser, c_ast, parse_file, c_generator
@@ -87,7 +88,7 @@ def parse_header(filename, omit_prefix, initname, ignore_headers = [], ignore_al
             print( generator.visit(ext))
             print(generator.visit(ext.type.args))
             print(generator.visit(ext.type.type))
-            func = DeclarationFunctionC(ext.name, params=ext.type.args, type_return=ext.type)
+            func = DeclarationFunctionC(ext.name, params=[ TypeC(generator.visit(arg))  for arg in ext.type.args], type_return=TypeC(generator.visit(ext.type.type)))
             skip = False
             ext.show()
             print(stringify_declaration(ext))
@@ -270,6 +271,8 @@ class DeclarationFunctionC:
             self.params=[]
         if type_return is not None:
             self.type_return=type_return
+        else:
+            self.type_return=TypeC("void")
 
 
     def getName(self):
@@ -299,6 +302,22 @@ class TypeC:
                 return "Not Implemented"
             case _:
                 return self.name
+
+@dataclass
+class DeclField:
+    v_name: str
+    v_namespace: str|None =field(init=False,default=None)
+    v_type: TypeC
+
+
+@dataclasses
+class DeclClassCpp:
+    v_name:str
+    v_namespace:str|None =field(default=None, init=False)
+    v_fields:list[DeclField]=field(default=[], init=False)
+    def __init__(self,name:str):
+        self.v_name=name
+
 
 
 
